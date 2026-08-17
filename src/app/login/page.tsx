@@ -44,11 +44,16 @@ export default function LoginPage() {
       });
       router.replace("/hoy");
     } catch (fallo) {
-      // NO mostrar `fallo` al usuario, por muy tentador que sea: Convex Auth
-      // emite mensajes propios ("Invalid credentials") que distinguen unos
-      // casos de otros. Enseñarlos reabriría la enumeración de cuentas sin que
-      // ningún test se entere. El detalle va a consola, no a la pantalla.
-      console.error("[login] fallo de acceso", fallo);
+      // NO mostrar `fallo` al usuario, por muy tentador que sea: distinguir un
+      // caso de otro reabriría la enumeración de cuentas sin que ningún test se
+      // entere. El endpoint tampoco los distingue ya (ver src/proxy.ts); esto
+      // es la segunda capa.
+      //
+      // El detalle solo se traza en desarrollo: en producción no hay motivo
+      // para dejar información de autenticación en la consola del navegador.
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[login] fallo de acceso", fallo);
+      }
       setError(ERROR_ACCESO);
       setEnviando(false);
     }

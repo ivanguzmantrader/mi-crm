@@ -119,10 +119,19 @@ async function buscarCredencial(
       account: { id: email },
     });
     return (cuenta?.user._id as Id<"users">) ?? null;
-  } catch {
-    // `InvalidAccountId` — la cuenta no existe.
-    return null;
+  } catch (error) {
+    // Solo se traga el caso esperado: `retrieveAccount` lanza `InvalidAccountId`
+    // cuando la cuenta no existe, en vez de devolver null como sugiere su tipo.
+    // Cualquier otro fallo (configuración, datos corruptos) tiene que salir a la
+    // superficie: enmascararlo llevaría a intentar crear una cuenta encima de un
+    // problema distinto.
+    if (esCuentaInexistente(error)) return null;
+    throw error;
   }
+}
+
+function esCuentaInexistente(error: unknown): boolean {
+  return error instanceof Error && error.message.includes("InvalidAccountId");
 }
 
 /**

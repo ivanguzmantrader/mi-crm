@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, type ReactNode } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { SideNav } from "@/components/ui/SideNav";
@@ -21,6 +21,7 @@ import { NAV, seccionActiva } from "./navItems";
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { usuario, isLoading } = useSession();
   const activo = seccionActiva(pathname);
 
@@ -40,6 +41,23 @@ export function AppShell({ children }: { children: ReactNode }) {
   });
 
   const tituloSeccion = NAV.find((i) => i.id === activo)?.label ?? "Vibe CRM";
+
+  /**
+   * Sesión resuelta y sin usuario: se acabó (caducó o se cerró en otra pestaña).
+   *
+   * El proxy solo mira la cookie al entrar, así que no cubre que la sesión se
+   * caiga con la app ya abierta. Si en ese momento se siguieran montando las
+   * pantallas, `PantallaHoy` lanzaría su query y Convex la rechazaría por
+   * autorización: errores en bucle en vez de una vuelta limpia al login.
+   */
+  const sesionPerdida = !isLoading && usuario === null;
+  useEffect(() => {
+    if (sesionPerdida) router.replace("/login");
+  }, [sesionPerdida, router]);
+
+  // Sin usuario no se monta ninguna pantalla: ni las que ya cargaron datos, ni
+  // las que están a punto de pedirlos.
+  if (sesionPerdida) return null;
 
   return (
     <div className="flex min-h-0 flex-1">
