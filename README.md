@@ -20,6 +20,11 @@ Construidas la librería de componentes (Linear PRO-54), la pantalla de inicio *
 
 ## Empezar a desarrollar
 
+> **Al clonar en Windows**: el prototipo de `Design/` incluye rutas de hasta 152
+> caracteres, así que si clonas en una carpeta cuya ruta pase de unos 100 el
+> checkout falla con *"Filename too long"*. Clona en una ruta corta, o usa
+> `git clone -c core.longpaths=true …`. En Linux (Railway) no aplica.
+
 ```bash
 npm install          # si no lo has hecho ya
 cp .env.local.example .env.local
