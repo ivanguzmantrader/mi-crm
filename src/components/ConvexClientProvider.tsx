@@ -1,13 +1,14 @@
 "use client";
 
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ConvexAuthNextjsProvider } from "@convex-dev/auth/nextjs";
+import { ConvexReactClient } from "convex/react";
 import { ReactNode } from "react";
 
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
 const convex = convexUrl ? new ConvexReactClient(convexUrl) : null;
 
 /**
- * Envuelve la app con el cliente de Convex.
+ * Envuelve la app con el cliente de Convex y la sesión de Convex Auth.
  *
  * Si falta NEXT_PUBLIC_CONVEX_URL se renderiza un aviso **en lugar de** los
  * hijos, nunca los hijos sin proveedor: `useQuery` lanza una excepción dura
@@ -18,7 +19,11 @@ const convex = convexUrl ? new ConvexReactClient(convexUrl) : null;
 export function ConvexClientProvider({ children }: { children: ReactNode }) {
   if (!convex) return <ConvexNoConfigurado />;
 
-  return <ConvexProvider client={convex}>{children}</ConvexProvider>;
+  return (
+    <ConvexAuthNextjsProvider client={convex}>
+      {children}
+    </ConvexAuthNextjsProvider>
+  );
 }
 
 function ConvexNoConfigurado() {

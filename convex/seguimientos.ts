@@ -1,30 +1,25 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { exigirSesion } from "./autorizacion";
 import { exigirFechaISO } from "./validaciones";
 
 /**
- * ⚠️ SIN AUTORIZACIÓN TODAVÍA.
+ * Seguimientos del negocio (F9 / PRO-14).
  *
- * Estas funciones son públicas y el esquema no tiene identidad ni tenant:
- * cualquiera con acceso a la app puede leer los seguimientos del negocio y
- * completar cualquiera de ellos. Es aceptable en la fase local/demo previa al
- * login, pero **bloquea el despliegue público hasta PRO-6** (sesión real), que
- * es cuando deben validar `ctx.auth` y el rol.
- *
- * A diferencia de las queries de `usuarios.ts`, aquí no se pone un guard de
- * entorno: son funciones de producto que sobreviven a PRO-6, y apagarlas con un
- * flag de desarrollo solo escondería el problema. Su protección es la de
- * verdad — la que llega con PRO-6.
+ * Todas las funciones exigen sesión. Que la lista no se filtre por responsable
+ * es una decisión de producto, no un descuido: la pantalla "Hoy" es la vista del
+ * equipo para que nada quede sin atender (T10 de Marta), no "mis tareas".
  */
 
 /**
- * Todos los seguimientos pendientes del negocio — sin filtrar por responsable:
- * la pantalla "Hoy" es la vista del equipo, no "mis tareas" (T10 de Marta,
- * criterio explícito de PRO-14).
+ * Todos los seguimientos pendientes del negocio, visibles para cualquier
+ * persona del equipo con sesión iniciada.
  */
 export const pendientes = query({
   args: {},
   handler: async (ctx) => {
+    await exigirSesion(ctx);
+
     const filas = await ctx.db
       .query("seguimientos")
       .withIndex("por_hecho", (q) => q.eq("hecho", false))
@@ -80,17 +75,18 @@ export const marcarHecho = mutation({
      *
      * Se omite en invocaciones desde CLI, donde no hay navegador que la aporte.
      *
-     * Al venir del cliente, `v.string()` no basta: se valida el formato en el
-     * handler. Sigue siendo un valor **afirmado por el cliente** — acotarlo
-     * contra la identidad de quien lo envía es cosa de PRO-6.
+     * Al venir del cliente, `v.string()` no basta: se valida el formato y se
+     * acota a ±1 día de la fecha del servidor, para que no sea un valor libre.
      */
     fecha: v.optional(v.string()),
   },
   handler: async (ctx, { id, hecho, fecha }) => {
+    await exigirSesion(ctx);
+
     const fechaHecho = hecho
       ? fecha === undefined
         ? hoyISOEnServidor()
-        : exigirFechaISO(fecha, "fecha")
+        : exigirFechaCercana(exigirFechaISO(fecha, "fecha"))
       : // `fechaHecho` es v.optional(v.string()): al reabrir hay que **borrar**
         // el campo con undefined, no escribir null, o falla la validación.
         undefined;
@@ -102,4 +98,28 @@ export const marcarHecho = mutation({
 /** Respaldo en UTC para cuando no llega la fecha local del cliente. */
 function hoyISOEnServidor(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Acota la fecha afirmada por el cliente a ayer, hoy o mañana según el servidor.
+ *
+ * La comparación es **por día, no por milisegundos**: se genera el conjunto de
+ * los tres días aceptables y se comprueba pertenencia. Restar timestamps
+ * provocaría falsos rechazos justo cerca de medianoche, que es el caso que este
+ * acotado existe para cubrir. ±1 día cubre cualquier zona horaria (máx. ±14 h).
+ */
+function exigirFechaCercana(fecha: string): string {
+  const hoy = new Date(`${hoyISOEnServidor()}T00:00:00Z`);
+  const aceptables = [-1, 0, 1].map((dias) => {
+    const d = new Date(hoy);
+    d.setUTCDate(d.getUTCDate() + dias);
+    return d.toISOString().slice(0, 10);
+  });
+
+  if (!aceptables.includes(fecha)) {
+    throw new Error(
+      `fecha debe estar entre ${aceptables[0]} y ${aceptables[2]}; se recibió ${fecha}`,
+    );
+  }
+  return fecha;
 }

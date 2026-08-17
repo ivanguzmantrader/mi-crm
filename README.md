@@ -14,9 +14,11 @@ CRM para negocios pequeños: clientes, seguimientos y ventas en un solo sitio, p
 
 ## Estado actual
 
-Construidas la librería de componentes (Linear PRO-54), la pantalla de inicio **Tareas del día** (PRO-14) y la **barra de navegación** (PRO-18). Clientes, Ficha, Ventas, Equipo y Perfil existen como destinos de navegación con un marcador que nombra su issue.
+Construidas la librería de componentes (Linear PRO-54), la pantalla de inicio **Tareas del día** (PRO-14), la **barra de navegación** (PRO-18) y el **acceso con email y contraseña** (PRO-6). Clientes, Ficha, Ventas, Equipo y Perfil existen como destinos de navegación con un marcador que nombra su issue.
 
-> ⚠️ **No desplegar en público todavía.** No hay login: la sesión es simulada (`src/lib/session.tsx`) y las funciones de Convex no comprueban identidad. Hasta **PRO-6** esto es solo demo local. Las queries de la sesión simulada fallan cerradas fuera de desarrollo (ver más abajo).
+La autenticación es de verdad: todas las funciones de Convex exigen sesión, y las de la dueña comprueban el rol. **No hay registro público** — las cuentas las crea la dueña (PRO-8) o, mientras esa pantalla no exista, `bootstrap:crearUsuario` por CLI.
+
+Para ver qué queda temporal en el código: `npm run andamiaje`.
 
 ## Empezar a desarrollar
 
@@ -32,39 +34,62 @@ npx convex dev        # primera vez: pide iniciar sesión en Convex y crea/enlaz
                        # deja el proceso corriendo en una terminal aparte (sincroniza el esquema
                        # y regenera convex/_generated en cada cambio)
 
-# Variables del deployment de dev (una sola vez; `convex env set` apunta a dev
-# salvo que pases --prod, así que producción no las hereda):
-npx convex env set PERMITIR_SESION_SIMULADA true   # habilita usuarios.listar / porEmail
-npx convex env set PERMITIR_SEED true              # habilita el seed (es destructivo)
-npx convex run seed:cargar                          # datos de demo, con fechas relativas a hoy
+# Claves de firma de la sesión (una sola vez por deployment):
+npx @convex-dev/auth                                # genera y fija JWT_PRIVATE_KEY y JWKS
+
+# Datos de demo (el seed es destructivo, por eso pide permiso explícito):
+npx convex env set PERMITIR_SEED true
+npx convex run seed:cargar                          # fechas relativas a hoy
+
+# Primera cuenta: no hay registro público, así que hay que sembrarla.
+npx convex env set PERMITIR_BOOTSTRAP true
+npx convex run bootstrap:crearUsuario '{"nombre":"Marta López","email":"marta@acme.es","password":"…","rol":"propietaria"}'
+npx convex env remove PERMITIR_BOOTSTRAP            # retirar en cuanto termines
 
 npm run dev            # en otra terminal
 ```
 
-Abre [http://localhost:3000](http://localhost:3000) — redirige a `/hoy`.
+Abre [http://localhost:3000](http://localhost:3000) — sin sesión te lleva a `/login`; con ella, a `/hoy`.
 
 Sin `NEXT_PUBLIC_CONVEX_URL` la app muestra un aviso de "Convex no configurado" en lugar de las pantallas: `useQuery` lanza una excepción si no hay proveedor, así que no se monta nada que dependa de datos (`src/components/ConvexClientProvider.tsx`).
 
-En la barra lateral hay un selector **Usuario (dev)** para cambiar de identidad y comprobar el control por rol (la pestaña *Equipo* solo la ve la dueña). Desaparece con PRO-6.
+> Si al iniciar sesión ves un fallo genérico y en consola aparece `invalid RSA PrivateKeyInfo`, es que `JWT_PRIVATE_KEY` se guardó con saltos de línea. Debe almacenarse en **una sola línea**, con los saltos convertidos en espacios.
 
 ## Estructura
 
 ```
 convex/            Esquema y funciones de Convex (queries/mutations)
-  schema.ts         Las 5 entidades del MVP (crm-mvp M1 / Linear PRO-5)
-  usuarios.ts       Sesión simulada — con guard de entorno, se va con PRO-6
+  schema.ts         Las 5 entidades del MVP + tablas de Convex Auth
+  auth.ts           Proveedor Password; bloquea el alta pública (PRO-6)
+  http.ts           Rutas HTTP de auth — sin esto el login no arranca
+  autorizacion.ts   exigirSesion / exigirDuena: la autorización de verdad
+  usuarios.ts       Perfil de quien llama y listado (solo dueña)
   seguimientos.ts   Pendientes del equipo + marcar hecho (PRO-14)
+  bootstrap.ts      Alta de usuarios por CLI hasta que exista PRO-8
   seed.ts           Datos de demo, destructivo, solo dev
+  salud.ts          Qué variables tiene puestas un deployment
 src/
+  proxy.ts          Redirección optimista por sesión (Next 16: antes middleware)
   app/
+    login/          Pantalla de acceso (PRO-6)
     (app)/          Grupo de rutas con el shell común (no añade segmento a la URL)
   components/
     ui/             Design system portado a React (PRO-54)
     layout/         AppShell, navegación y placeholders (PRO-18)
     hoy/            Pantalla Tareas del día (PRO-14)
   lib/              session, fechas, estadoCliente y utilidades
+scripts/
+  andamiaje.mjs     Inventario de lo temporal (npm run andamiaje)
 Design/             Design system y prototipo de referencia (no tocar desde la app)
 ```
+
+## Andamiaje: cómo no volver a acumular deuda a ciegas
+
+Toda pieza temporal lleva `ANDAMIAJE(PRO-XX):` en su comentario y aparece en `npm run andamiaje`. El inventario se genera del código, así que no puede desincronizarse.
+
+Si además toca datos, va detrás de un flag `PERMITIR_*` que producción no tiene: así el "esto no debe correr en producción" deja de ser una nota en un comentario y pasa a ser una garantía. `npx convex run salud:configuracion` dice de un vistazo qué tiene puesto un deployment.
+
+Y una rutina: no cerrar una issue sin ejecutar `npm run andamiaje` y dejar en Linear qué queda stubeado.
 
 ## Convenciones
 
@@ -74,17 +99,16 @@ Design/             Design system y prototipo de referencia (no tocar desde la a
 
 ## Despliegue
 
-> ## ⛔ El despliegue público está bloqueado hasta PRO-6
+> ## El bloqueo por falta de login ya está levantado
 >
-> No hay login. `convex/seguimientos.ts` expone queries y mutations públicas sin
-> comprobar identidad, así que **cualquiera que abra la URL vería los
-> seguimientos del negocio y podría completarlos**. Las funciones de
-> `usuarios.ts` sí fallan cerradas fuera de desarrollo, pero eso no cubre lo
-> anterior.
+> Con PRO-6 todas las funciones de Convex exigen sesión y las de la dueña
+> comprueban el rol, así que la app ya se puede publicar. Lo que queda es
+> **configurar bien el deployment de producción**: es donde se concentra el
+> riesgo, porque son variables por deployment y lo que funciona en dev no se
+> hereda.
 >
-> Railway está conectado a GitHub con despliegue automático: **un push a
-> `master` publica**. Antes del primer push hay que decidir conscientemente qué
-> pasa con ese despliegue (ver "Antes del primer push").
+> Railway sigue con el origen de GitHub **desconectado** desde antes de PRO-6
+> (ver "Reconectar el despliegue"), así que hoy un push no publica nada.
 
 - **GitHub**: `https://github.com/ivanguzmantrader/mi-crm` (rama `master`).
 - **Railway**: `railway.json` fija el build, el arranque y el healthcheck; Nixpacks resuelve el resto a partir de `package.json` y `.nvmrc`.
@@ -100,21 +124,36 @@ npm run build:railway
 
 `convex deploy` publica el esquema y las funciones en producción y expone la URL resultante al build de Next. Es decir: **no hay que definir `NEXT_PUBLIC_CONVEX_URL` a mano en Railway**; se deriva de la clave de despliegue.
 
-Variables a definir en Railway:
+Variables a definir **en Railway**:
 
 | Variable | Valor |
 |---|---|
 | `CONVEX_DEPLOY_KEY` | Clave de producción (Convex → Settings → Deploy keys) |
 
-Y las que **no** deben existir en el deployment de producción de Convex: `PERMITIR_SESION_SIMULADA` y `PERMITIR_SEED`. Sin ellas, la sesión simulada y el seed destructivo se niegan a ejecutarse.
+Variables a definir **en el deployment de producción de Convex** (no se heredan de dev):
+
+| Variable | Cómo |
+|---|---|
+| `JWT_PRIVATE_KEY` | `npx @convex-dev/auth --prod` — **sin esto el login falla solo en producción** |
+| `JWKS` | igual que la anterior |
+
+Y las que **no** deben existir en producción: `PERMITIR_SEED` y `PERMITIR_BOOTSTRAP`. Sin ellas, el seed destructivo y el alta por CLI se niegan a ejecutarse. La primera cuenta se crea activando `PERMITIR_BOOTSTRAP` un momento y retirándola justo después.
+
+Antes de publicar, comprobarlo todo de una vez:
+
+```bash
+npx convex run salud:configuracion --prod
+# auth.*      → deben estar las dos en true
+# andamiaje.* → deben estar todas en false
+```
 
 > ⚠️ No ejecutes `npm run build:railway` en tu máquina: con `CONVEX_DEPLOYMENT` presente en `.env.local`, `convex deploy` apunta al deployment de **producción**. En local se usa `npx convex dev`.
 
-### Estado actual del despliegue: pausado
+### Reconectar el despliegue
 
-El servicio `mi-crm` (proyecto Railway `illustrious-love`, entorno `production`) **tiene el origen de GitHub desconectado a propósito**, para que empujar a `master` no publique la app mientras no exista PRO-6. Nunca se ha desplegado: la URL pública responde 404.
+El servicio `mi-crm` (proyecto Railway `illustrious-love`, entorno `production`) sigue con **el origen de GitHub desconectado**, de cuando no había login. Nunca se ha desplegado: la URL pública responde 404. Mientras siga así, ningún push publica.
 
-Al llegar PRO-6, reconectar con:
+Para reactivarlo:
 
 ```bash
 railway link --project illustrious-love
@@ -123,7 +162,10 @@ railway service source connect --repo ivanguzmantrader/mi-crm --branch master --
 
 …y definir `CONVEX_DEPLOY_KEY` en las variables del servicio. A partir de ahí, cada push a `master` despliega.
 
-### Antes del primer push
+### Antes de reconectar
 
 1. `npm run typecheck && npm run lint && npm run build` en local.
-2. Confirmar que el origen de Railway sigue desconectado (`railway service list`): si aparece la línea `repo:`, el push publicaría.
+2. Poner `JWT_PRIVATE_KEY` y `JWKS` en el deployment de producción de Convex.
+3. `npx convex run salud:configuracion --prod` → auth en true, andamiaje en false.
+4. Crear la primera dueña de producción con `bootstrap:crearUsuario`, y retirar `PERMITIR_BOOTSTRAP` acto seguido.
+5. Repetir contra producción las comprobaciones que dependen del deployment: que las funciones rechacen sin sesión, que el alta pública falle y que el login funcione. Pasar en local no garantiza nada de eso.

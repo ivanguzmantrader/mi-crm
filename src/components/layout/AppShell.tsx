@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { SideNav } from "@/components/ui/SideNav";
 import { TabBar, type ItemNav } from "@/components/ui/TabBar";
 import { esDuena, useSession } from "@/lib/session";
-import { CuentaDev } from "./CuentaDev";
+import { Cuenta } from "./Cuenta";
 import { NAV, seccionActiva } from "./navItems";
 
 /**
@@ -47,7 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         className="hidden md:flex"
         items={items}
         activeId={activo}
-        footer={<CuentaDev />}
+        footer={<Cuenta />}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">

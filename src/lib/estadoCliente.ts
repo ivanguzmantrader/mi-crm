@@ -6,8 +6,10 @@ export type EstadoCliente = Doc<"clientes">["estado"];
 /**
  * Presentación del Estado del cliente (design.md §8 › Badge).
  *
- * El valor **se lee**, no se calcula: derivarlo de las ventas es PRO-17. El
- * seed ya lo deja coherente para que ese cambio no mueva ningún badge.
+ * ANDAMIAJE(PRO-17): el estado se lee de la tabla, no se deriva de las ventas.
+ *
+ * El seed ya lo deja coherente con la precedencia correcta, para que ese cambio
+ * no mueva ningún badge cuando llegue.
  */
 export const ESTADO_CLIENTE: Record<
   EstadoCliente,

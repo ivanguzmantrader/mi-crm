@@ -8,9 +8,9 @@ import { IconButton } from "./IconButton";
  * Panel superpuesto: hoja inferior en móvil, modal centrado en escritorio
  * (diseñado en PRO-39).
  *
+ * ANDAMIAJE(PRO-19): sin focus trap ni comportamiento unificado de formularios.
  * Alcance deliberadamente mínimo: role/aria, cierre con Esc y devolución del
- * foco al elemento que lo abrió. **El focus trap completo y el comportamiento
- * unificado de formularios son PRO-19** — no se implementan aquí.
+ * foco al elemento que lo abrió.
  */
 export function Overlay({
   open,

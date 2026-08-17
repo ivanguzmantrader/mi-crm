@@ -11,6 +11,7 @@ export interface AccesoRapido {
   primaria?: boolean;
 }
 
+// ANDAMIAJE(PRO-13): los 4 accesos abren el panel con un cuerpo stub; los formularios reales son PRO-13, PRO-12, PRO-15 y PRO-9.
 export const ACCESOS: AccesoRapido[] = [
   {
     id: "tarea",

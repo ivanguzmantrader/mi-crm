@@ -1,49 +1,57 @@
-import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { query } from "./_generated/server";
+import { exigirDuena, usuarioActual } from "./autorizacion";
 
 /**
  * Usuarios del negocio (F18 / PRO-51).
  *
- * ⚠️ Estas dos queries existen **solo para sostener la sesión simulada**
- * mientras no está el login (PRO-6): no comprueban identidad, así que sin
- * protección expondrían la lista de personas del negocio con sus emails y roles
- * a cualquiera con acceso a la app.
- *
- * Por eso fallan cerradas: exigen `PERMITIR_SESION_SIMULADA=true`, una variable
- * **por deployment** que se activa en dev y que producción no tiene (igual que
- * el guard de `seed.ts`). Así el NO-GO de despliegue deja de depender de que
- * alguien lea un comentario: si esto se sube a producción antes de PRO-6, la
- * sesión simulada no arranca en vez de filtrar datos.
- *
- * Al implementar PRO-6 este guard desaparece y lo sustituye la comprobación de
- * `ctx.auth` real.
+ * No existe una búsqueda por email expuesta al cliente: la identidad se
+ * resuelve siempre desde la sesión. Una función `porEmail` pública convertiría
+ * la app en un enumerador de perfiles para cualquiera con cuenta.
  */
-function exigirSesionSimulada() {
-  if (process.env.PERMITIR_SESION_SIMULADA !== "true") {
-    throw new Error(
-      "La sesión simulada está desactivada en este deployment. Es andamiaje previo a PRO-6 " +
-        "(login real) y no debe correr en producción. Para desarrollo: " +
-        "npx convex env set PERMITIR_SESION_SIMULADA true",
-    );
-  }
-}
 
-/** Alimenta el selector de usuario de desarrollo (ver src/lib/session.tsx). */
-export const listar = query({
+/** Estado de la sesión tal como lo necesita la UI. */
+export type EstadoSesion =
+  | { estado: "anonimo" }
+  | { estado: "activa"; usuario: { _id: string; nombre: string; email: string; rol: "propietaria" | "comercial" } }
+  /** Credencial válida sin perfil de negocio: no debería pasar nunca. */
+  | { estado: "sin_perfil" };
+
+/**
+ * Perfil de quien llama, y nada más.
+ *
+ * Distingue tres estados, no dos. El tercero —sesión válida cuya credencial no
+ * tiene fila en `usuarios`— tiene que ser explícito: si se colapsara con
+ * "anónimo", la app se quedaría en /hoy reintentando queries que fallan por
+ * autorización, con la pantalla vacía y sin ninguna pista de qué ocurre.
+ * Al distinguirlo, el cliente puede cerrar sesión de inmediato.
+ */
+export const actual = query({
   args: {},
-  handler: async (ctx) => {
-    exigirSesionSimulada();
-    return await ctx.db.query("usuarios").collect();
+  handler: async (ctx): Promise<EstadoSesion> => {
+    const authUserId = await getAuthUserId(ctx);
+    if (authUserId === null) return { estado: "anonimo" };
+
+    const usuario = await usuarioActual(ctx);
+    if (usuario === null) return { estado: "sin_perfil" };
+
+    return {
+      estado: "activa",
+      usuario: {
+        _id: usuario._id,
+        nombre: usuario.nombre,
+        email: usuario.email,
+        rol: usuario.rol,
+      },
+    };
   },
 });
 
-export const porEmail = query({
-  args: { email: v.string() },
-  handler: async (ctx, { email }) => {
-    exigirSesionSimulada();
-    return await ctx.db
-      .query("usuarios")
-      .withIndex("por_email", (q) => q.eq("email", email))
-      .unique();
+/** Listado del equipo. Solo la dueña (F18). */
+export const listar = query({
+  args: {},
+  handler: async (ctx) => {
+    await exigirDuena(ctx);
+    return await ctx.db.query("usuarios").collect();
   },
 });

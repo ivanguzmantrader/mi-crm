@@ -1,3 +1,4 @@
+// ANDAMIAJE(PRO-10): pantalla placeholder — Listado de clientes con buscador.
 import { PantallaPendiente } from "@/components/layout/PantallaPendiente";
 
 export default function ClientesPage() {

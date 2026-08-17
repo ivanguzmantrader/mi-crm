@@ -1,3 +1,4 @@
+import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
@@ -11,12 +12,33 @@ import { v } from "convex/values";
  * "CRM - resto PRD" (R1-R6) — no están aquí todavía.
  */
 export default defineSchema({
+  // Tablas de Convex Auth: `users` (credencial), `authAccounts`, `authSessions`…
+  // Guardan la identidad; el perfil de negocio sigue en `usuarios`.
+  ...authTables,
+
   usuarios: defineTable({
     nombre: v.string(),
+    // Siempre normalizado a minúsculas (ver normalizarEmail en validaciones.ts):
+    // este mismo valor es el `account.id` de la credencial.
     email: v.string(),
     // "propietaria" (Dueña) | "comercial" (Atiende y vende)
     rol: v.union(v.literal("propietaria"), v.literal("comercial")),
-  }).index("por_email", ["email"]),
+    /**
+     * Enlace con la credencial de Convex Auth.
+     *
+     * Es opcional porque una persona puede existir como perfil antes de tener
+     * contraseña — es el estado intermedio del arranque y el que producirá
+     * PRO-8 al dar de alta a alguien.
+     *
+     * La relación debe ser **1:1**, y hay que imponerlo a mano: los índices de
+     * Convex no son únicos, así que este índice no impide dos filas apuntando
+     * al mismo `users`. Si eso ocurriera, `usuarioActual()` devolvería una
+     * identidad —y un rol— ambiguos.
+     */
+    authUserId: v.optional(v.id("users")),
+  })
+    .index("por_email", ["email"])
+    .index("por_authUser", ["authUserId"]),
 
   clientes: defineTable({
     nombre: v.string(),

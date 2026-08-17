@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { exigirFechaISO } from "./validaciones";
+import { exigirFechaISO, normalizarEmail } from "./validaciones";
 
 /**
  * Datos de demostración, portados del prototipo de `Design/`.
@@ -46,17 +46,20 @@ export const cargar = internalMutation({
     const d = (dias: number) => desplazar(ancla, dias);
 
     // — Usuarios ————————————————————————————————————————————————
-    const marta = await ctx.db.insert("usuarios", {
+    // Se respetan los existentes en vez de recrearlos: desde PRO-6 llevan
+    // enlazada una credencial (`authUserId`), y borrarlos la dejaría huérfana —
+    // la persona no podría entrar y la app la echaría al login.
+    const marta = await asegurarUsuario(ctx, {
       nombre: "Marta López",
       email: "marta@acme.es",
       rol: "propietaria",
     });
-    const carlos = await ctx.db.insert("usuarios", {
+    const carlos = await asegurarUsuario(ctx, {
       nombre: "Carlos Ruiz",
       email: "carlos@betadigital.com",
       rol: "comercial",
     });
-    await ctx.db.insert("usuarios", {
+    await asegurarUsuario(ctx, {
       nombre: "Lucía Marín",
       email: "lucia@epsilonweb.com",
       rol: "comercial",
@@ -205,12 +208,41 @@ function desplazar(iso: string, dias: number): string {
   return fecha.toISOString().slice(0, 10);
 }
 
+/**
+ * Devuelve el usuario con ese email, creándolo si no existe.
+ *
+ * Nunca sobrescribe: si la persona ya está, se conserva tal cual — incluido su
+ * `authUserId`, que es lo que le permite iniciar sesión.
+ */
+async function asegurarUsuario(
+  ctx: MutationCtx,
+  datos: {
+    nombre: string;
+    email: string;
+    rol: "propietaria" | "comercial";
+  },
+): Promise<Id<"usuarios">> {
+  const email = normalizarEmail(datos.email);
+  const existente = await ctx.db
+    .query("usuarios")
+    .withIndex("por_email", (q) => q.eq("email", email))
+    .unique();
+
+  if (existente !== null) return existente._id;
+  return await ctx.db.insert("usuarios", { ...datos, email });
+}
+
+/**
+ * Tablas que el seed vacía. **`usuarios` no está**, a propósito: desde PRO-6
+ * lleva credenciales enlazadas y borrarla dejaría a la gente sin poder entrar.
+ * Los usuarios se gestionan con `bootstrap:crearUsuario` (y con PRO-8 cuando
+ * llegue), no aquí.
+ */
 const TABLAS = [
   "seguimientos",
   "interacciones",
   "ventas",
   "clientes",
-  "usuarios",
 ] as const;
 
 async function vaciar(ctx: MutationCtx) {

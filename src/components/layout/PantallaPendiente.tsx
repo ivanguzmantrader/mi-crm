@@ -6,6 +6,9 @@ import { EmptyState } from "@/components/ui/EmptyState";
  * Destino de navegación aún sin construir. Existe para que la barra de
  * navegación (PRO-18) se pueda usar y validar de verdad antes de que estén
  * todas las pantallas.
+ *
+ * Cada pantalla que lo usa lleva su propio marcador ANDAMIAJE con la issue que
+ * la construye, así que el inventario las lista una a una.
  */
 export function PantallaPendiente({
   titulo,

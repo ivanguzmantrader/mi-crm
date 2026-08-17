@@ -1,3 +1,4 @@
+// ANDAMIAJE(PRO-8): pantalla placeholder — Gestión de usuarios.
 "use client";
 
 import { useEffect } from "react";
@@ -9,11 +10,10 @@ import { esDuena, useSession } from "@/lib/session";
 /**
  * Gestión de usuarios — solo para el rol dueña (F18 / PRO-8).
  *
- * El guard es de cliente a propósito: con la sesión simulada el rol vive en
- * localStorage y en un hook de Convex, así que el servidor no lo conoce y un
- * `redirect()` en el servidor no tendría con qué decidir. Cuando PRO-6 aporte
- * sesión real, esto pasa a ser una comprobación de servidor — y deja de ser
- * solo cosmética.
+ * Este guard es **presentación, no seguridad**: evita pintar una pantalla que
+ * de todas formas no podría cargar datos. Quien protege de verdad es
+ * `exigirDuena` en `convex/usuarios.ts`, porque las funciones de Convex se
+ * pueden llamar sin pasar por el navegador.
  */
 export default function EquipoPage() {
   const router = useRouter();

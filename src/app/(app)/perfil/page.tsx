@@ -1,3 +1,4 @@
+// ANDAMIAJE(PRO-7): pantalla placeholder — Perfil / Mi cuenta.
 import { PantallaPendiente } from "@/components/layout/PantallaPendiente";
 
 export default function PerfilPage() {

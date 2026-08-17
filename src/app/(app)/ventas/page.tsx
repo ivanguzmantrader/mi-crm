@@ -1,3 +1,4 @@
+// ANDAMIAJE(PRO-16): pantalla placeholder — Ventas y oportunidades.
 import { PantallaPendiente } from "@/components/layout/PantallaPendiente";
 
 export default function VentasPage() {

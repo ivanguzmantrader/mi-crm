@@ -39,8 +39,7 @@ export function FilaSeguimiento({
       // puede fecharlo bien por su cuenta.
       await marcarHecho({ id: seguimiento._id, hecho: true, fecha: hoy });
     } catch {
-      // Feedback mínimo en la propia fila. El patrón completo (actualización
-      // optimista + toast con Deshacer) es PRO-55.
+      // ANDAMIAJE(PRO-55): aviso mínimo en la fila, sin actualización optimista ni toast con Deshacer.
       setFallo(true);
     }
   }

@@ -8,6 +8,33 @@
  * el historial de la ficha (PRO-11), que comparan estas cadenas directamente.
  */
 
+/**
+ * Mensaje único para cualquier fallo de acceso. Es defensa en profundidad, no
+ * la garantía: `Password` lanza su propio "Invalid credentials" desde
+ * `retrieveAccount` y eso no se controla desde aquí. Quien garantiza que el
+ * usuario nunca vea textos distintos —y por tanto que no se puedan enumerar
+ * cuentas— es la pantalla de login, que descarta el error recibido.
+ */
+export const ERROR_ACCESO = "No se ha podido completar la operación.";
+
+const FORMATO_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Normaliza un email a su forma canónica: sin espacios y en minúsculas.
+ *
+ * La usan `profile()` de convex/auth.ts y el arranque, a propósito la misma:
+ * el email normalizado acaba siendo el `account.id` de la credencial, así que
+ * si cada sitio normalizara por su cuenta, entrar como "Marta@Acme.es" no
+ * encontraría la cuenta creada como "marta@acme.es" y se rechazaría un login
+ * perfectamente válido.
+ */
+export function normalizarEmail(valor: unknown): string {
+  if (typeof valor !== "string") throw new Error(ERROR_ACCESO);
+  const normalizado = valor.trim().toLowerCase();
+  if (!FORMATO_EMAIL.test(normalizado)) throw new Error(ERROR_ACCESO);
+  return normalizado;
+}
+
 const FORMATO_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 /** ¿Es una fecha real en formato YYYY-MM-DD? */

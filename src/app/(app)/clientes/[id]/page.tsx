@@ -1,3 +1,4 @@
+// ANDAMIAJE(PRO-11): pantalla placeholder — Ficha de cliente.
 import { PantallaPendiente } from "@/components/layout/PantallaPendiente";
 
 export default function FichaClientePage() {
