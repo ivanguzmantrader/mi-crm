@@ -110,8 +110,20 @@ Y las que **no** deben existir en el deployment de producción de Convex: `PERMI
 
 > ⚠️ No ejecutes `npm run build:railway` en tu máquina: con `CONVEX_DEPLOYMENT` presente en `.env.local`, `convex deploy` apunta al deployment de **producción**. En local se usa `npx convex dev`.
 
+### Estado actual del despliegue: pausado
+
+El servicio `mi-crm` (proyecto Railway `illustrious-love`, entorno `production`) **tiene el origen de GitHub desconectado a propósito**, para que empujar a `master` no publique la app mientras no exista PRO-6. Nunca se ha desplegado: la URL pública responde 404.
+
+Al llegar PRO-6, reconectar con:
+
+```bash
+railway link --project illustrious-love
+railway service source connect --repo ivanguzmantrader/mi-crm --branch master --service mi-crm
+```
+
+…y definir `CONVEX_DEPLOY_KEY` en las variables del servicio. A partir de ahí, cada push a `master` despliega.
+
 ### Antes del primer push
 
-1. Decidir qué hacer con el despliegue automático mientras no exista PRO-6 — lo más simple es pausar el servicio en Railway, o no darle `CONVEX_DEPLOY_KEY` todavía (sin ella el build falla y no se publica nada).
-2. Comprobar que la rama que Railway observa es la que se va a empujar (`master`).
-3. `npm run typecheck && npm run lint && npm run build` en local.
+1. `npm run typecheck && npm run lint && npm run build` en local.
+2. Confirmar que el origen de Railway sigue desconectado (`railway service list`): si aparece la línea `repo:`, el push publicaría.
