@@ -1,0 +1,18 @@
+# El repositorio se desarrolla en Windows y se construye en Linux (Railway).
+# Se normaliza a LF dentro del repo para que el final de línea no dependa de la
+# máquina de quien commitea.
+* text=auto eol=lf
+
+# Binarios: que git no intente normalizarlos ni mostrarlos como diff.
+*.zip binary
+*.ico binary
+*.png binary
+*.jpg binary
+*.woff2 binary
+
+# El lockfile ensucia las revisiones; sigue versionado, pero se colapsa.
+package-lock.json linguist-generated=true diff=none
+
+# El prototipo de Claude Design es material de referencia, no código del
+# proyecto: que no cuente para las estadísticas de lenguaje de GitHub.
+Design/** linguist-vendored=true

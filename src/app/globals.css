@@ -1,0 +1,183 @@
+@import "tailwindcss";
+
+/*
+ * Tokens del Vibe CRM Design System (ver /Design/design.md).
+ * Modo oscuro es opt-in vía atributo data-theme="dark" en <html> (no sigue
+ * prefers-color-scheme automáticamente) — ver design.md §2.
+ */
+:root {
+  --color-primary: #16A34A;
+  --color-primary-hover: #15803D;
+  --color-primary-active: #166534;
+  --color-primary-subtle: #F0FDF4;
+  --color-on-primary: #FFFFFF;
+
+  --color-bg: #F7F8F9;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #F1F2F4;
+  --color-border: #E8EAED;
+  --color-border-strong: #D8DBDF;
+
+  --color-text: #1A1D21;
+  --color-text-muted: #656C75;
+  --color-text-subtle: #868D96;
+  --color-focus: #16A34A;
+
+  --color-success: #15803D;
+  --color-success-bg: #ECFDF3;
+  --color-success-text: #166534;
+  --color-warning: #B45309;
+  --color-warning-bg: #FFFBEB;
+  --color-warning-text: #92400E;
+  --color-error: #DC2626;
+  --color-error-bg: #FEF2F2;
+  --color-error-text: #991B1B;
+  --color-info: #2563EB;
+  --color-info-bg: #EFF6FF;
+  --color-info-text: #1E40AF;
+
+  /* Velo de los paneles superpuestos (hoja inferior / modal). */
+  --color-scrim: rgba(16, 24, 32, .45);
+
+  --shadow-xs: 0 1px 2px rgba(16, 24, 32, .04);
+  --shadow-sm: 0 1px 2px rgba(16, 24, 32, .06), 0 1px 3px rgba(16, 24, 32, .05);
+  --shadow-md: 0 2px 4px rgba(16, 24, 32, .05), 0 4px 12px rgba(16, 24, 32, .06);
+  --shadow-lg: 0 8px 24px rgba(16, 24, 32, .10);
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 16px;
+
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  --duration-fast: 150ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  --control-h: 48px;
+  --control-h-compact: 44px;
+  --touch-min: 44px;
+
+  --focus-ring: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-focus);
+}
+
+[data-theme="dark"] {
+  --color-primary: #22C55E;
+  --color-primary-hover: #4ADE80;
+  --color-primary-active: #86EFAC;
+  --color-primary-subtle: rgba(34, 197, 94, .14);
+  --color-on-primary: #052E16;
+
+  --color-bg: #0E0F11;
+  --color-surface: #16181B;
+  --color-surface-2: #1C1F23;
+  --color-border: #2A2E33;
+  --color-border-strong: #3A3F45;
+
+  --color-text: #ECEDEE;
+  --color-text-muted: #9BA1A8;
+  --color-text-subtle: #71777E;
+  --color-focus: #4ADE80;
+
+  --color-success: #4ADE80;
+  --color-success-bg: rgba(34, 197, 94, .14);
+  --color-success-text: #86EFAC;
+  --color-warning: #FBBF24;
+  --color-warning-bg: rgba(217, 119, 6, .16);
+  --color-warning-text: #FCD34D;
+  --color-error: #F87171;
+  --color-error-bg: rgba(220, 38, 38, .16);
+  --color-error-text: #FCA5A5;
+  --color-info: #60A5FA;
+  --color-info-bg: rgba(37, 99, 235, .18);
+  --color-info-text: #93C5FD;
+
+  /* Más denso en oscuro: sobre un lienzo ya oscuro, .45 no separa lo bastante. */
+  --color-scrim: rgba(4, 6, 8, .65);
+}
+
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-active: var(--color-primary-active);
+  --color-primary-subtle: var(--color-primary-subtle);
+  --color-on-primary: var(--color-on-primary);
+
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-surface-2: var(--color-surface-2);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-subtle: var(--color-text-subtle);
+  --color-focus: var(--color-focus);
+
+  --color-success: var(--color-success);
+  --color-success-bg: var(--color-success-bg);
+  --color-success-text: var(--color-success-text);
+  --color-warning: var(--color-warning);
+  --color-warning-bg: var(--color-warning-bg);
+  --color-warning-text: var(--color-warning-text);
+  --color-error: var(--color-error);
+  --color-error-bg: var(--color-error-bg);
+  --color-error-text: var(--color-error-text);
+  --color-info: var(--color-info);
+  --color-info-bg: var(--color-info-bg);
+  --color-info-text: var(--color-info-text);
+
+  --color-scrim: var(--color-scrim);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Anillo de foco verde de 2px con separación (design.md §5). Se aplica con
+ * :focus-visible para que no salte al hacer clic con el ratón. Todo control
+ * interactivo del design system lo usa en vez de definir su propio foco.
+ */
+.ring-focus:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Skeleton de carga (design.md §8 › Estados de carga y vacío). */
+@keyframes vibe-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Spinner de los botones en estado cargando. */
+@keyframes vibe-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
