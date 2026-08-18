@@ -1,19 +1,22 @@
-import { createAccount, retrieveAccount } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import type { ActionCtx } from "./_generated/server";
 import { internalAction, internalMutation } from "./_generated/server";
+import { obtenerOCrearCredencial } from "./credenciales";
 import { normalizarEmail } from "./validaciones";
 
 /**
- * ANDAMIAJE(PRO-8): alta de usuarios por CLI.
+ * Arranque de un deployment: crea la primera dueña.
  *
- * Existe porque el PRD prohíbe el registro público y la pantalla que da de alta
- * personas (PRO-8) todavía no está: sin esto no habría forma de crear la primera
- * dueña, ni de tener un segundo usuario con el que probar el control por rol.
- * Desaparece cuando PRO-8 traiga la pantalla real, que usará exactamente las
- * mismas APIs de Convex Auth.
+ * **No es andamiaje, es herramienta de operación** — como `seed.ts`. El PRD
+ * prohíbe el registro público, así que un deployment recién creado no tiene por
+ * dónde empezar: nadie puede entrar hasta que exista una dueña, y la pantalla
+ * que da de alta personas (PRO-8) exige ser dueña para usarse. Este es el
+ * comando que rompe ese círculo, y hará falta cada vez que se levante un
+ * entorno nuevo.
+ *
+ * El día a día del alta de usuarios ya no pasa por aquí: eso es la pantalla de
+ * Equipo, que usa exactamente las mismas APIs (`convex/credenciales.ts`).
  *
  * Uso:
  *   npx convex env set PERMITIR_BOOTSTRAP true
@@ -76,65 +79,6 @@ export const crearUsuario = internalAction({
 });
 
 /**
- * Devuelve la credencial de ese email, creándola si no la hay.
- *
- * Parece más rebuscado de lo que debería, y es por cómo se comporta la
- * librería: **`retrieveAccount` lanza `InvalidAccountId` cuando la cuenta no
- * existe**, en vez de devolver `null` como sugiere su tipo. Por eso la búsqueda
- * va envuelta, y por eso el fallo de `createAccount` se reintenta como búsqueda:
- * así la operación converge al mismo estado se ejecute una vez o diez, que es lo
- * que permite reintentar un arranque que murió a medias.
- */
-async function obtenerOCrearCredencial(
-  ctx: ActionCtx,
-  datos: { email: string; password: string; nombre: string },
-): Promise<{ authUserId: Id<"users">; reutilizada: boolean }> {
-  const existente = await buscarCredencial(ctx, datos.email);
-  if (existente !== null) return { authUserId: existente, reutilizada: true };
-
-  try {
-    const { user } = await createAccount(ctx, {
-      provider: "password",
-      account: { id: datos.email, secret: datos.password },
-      profile: { email: datos.email, name: datos.nombre },
-    });
-    return { authUserId: user._id as Id<"users">, reutilizada: false };
-  } catch (error) {
-    // Si falló porque la cuenta ya existía, recupérala en vez de dejar el
-    // arranque atascado.
-    const tras = await buscarCredencial(ctx, datos.email);
-    if (tras !== null) return { authUserId: tras, reutilizada: true };
-    throw error;
-  }
-}
-
-async function buscarCredencial(
-  ctx: ActionCtx,
-  email: string,
-): Promise<Id<"users"> | null> {
-  try {
-    const cuenta = await retrieveAccount(ctx, {
-      provider: "password",
-      // Sin `secret`: solo interesa saber si la cuenta está, no verificarla.
-      account: { id: email },
-    });
-    return (cuenta?.user._id as Id<"users">) ?? null;
-  } catch (error) {
-    // Solo se traga el caso esperado: `retrieveAccount` lanza `InvalidAccountId`
-    // cuando la cuenta no existe, en vez de devolver null como sugiere su tipo.
-    // Cualquier otro fallo (configuración, datos corruptos) tiene que salir a la
-    // superficie: enmascararlo llevaría a intentar crear una cuenta encima de un
-    // problema distinto.
-    if (esCuentaInexistente(error)) return null;
-    throw error;
-  }
-}
-
-function esCuentaInexistente(error: unknown): boolean {
-  return error instanceof Error && error.message.includes("InvalidAccountId");
-}
-
-/**
  * Crea el perfil, o devuelve el existente si ya hay uno con ese email.
  *
  * Impone la unicidad de email a mano: los índices de Convex no son únicos, y dos
@@ -192,6 +136,9 @@ export const enlazarCredencial = internalMutation({
       );
     }
 
-    await ctx.db.patch(usuarioId, { authUserId });
+    // `activo: true` también: si se rearranca sobre alguien dado de baja, darle
+    // credencial sin reactivarla lo dejaría con acceso pero rechazado por
+    // `exigirSesion`, que es de los estados más difíciles de diagnosticar.
+    await ctx.db.patch(usuarioId, { authUserId, activo: true });
   },
 });

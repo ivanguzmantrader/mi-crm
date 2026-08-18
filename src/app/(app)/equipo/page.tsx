@@ -1,9 +1,8 @@
-// ANDAMIAJE(PRO-8): pantalla placeholder — Gestión de usuarios.
 "use client";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { PantallaPendiente } from "@/components/layout/PantallaPendiente";
+import { PantallaEquipo } from "@/components/equipo/PantallaEquipo";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { esDuena, useSession } from "@/lib/session";
 
@@ -12,8 +11,8 @@ import { esDuena, useSession } from "@/lib/session";
  *
  * Este guard es **presentación, no seguridad**: evita pintar una pantalla que
  * de todas formas no podría cargar datos. Quien protege de verdad es
- * `exigirDuena` en `convex/usuarios.ts`, porque las funciones de Convex se
- * pueden llamar sin pasar por el navegador.
+ * `exigirDuena` / `exigirDuenaAction` en `convex/usuarios.ts`, porque las
+ * funciones de Convex se pueden llamar sin pasar por el navegador.
  */
 export default function EquipoPage() {
   const router = useRouter();
@@ -34,11 +33,5 @@ export default function EquipoPage() {
     );
   }
 
-  return (
-    <PantallaPendiente
-      titulo="Equipo"
-      issue="PRO-8"
-      descripcion="Alta, edición y baja de las personas que usan el CRM."
-    />
-  );
+  return <PantallaEquipo />;
 }

@@ -36,6 +36,20 @@ export default defineSchema({
      * identidad —y un rol— ambiguos.
      */
     authUserId: v.optional(v.id("users")),
+    /**
+     * Baja lógica (PRO-8). Dar de baja a alguien **no borra su fila**: se le
+     * quita el acceso y se marca aquí.
+     *
+     * El motivo es de datos, no de comodidad. `seguimientos.responsableId`,
+     * `interacciones.autorId` y `ventas.autorId` apuntan a esta tabla: borrar
+     * la fila dejaría el historial mintiendo sobre quién hizo qué, y la ficha
+     * del cliente con huecos.
+     *
+     * Es opcional porque las filas creadas antes de PRO-8 no lo tienen; se lee
+     * siempre con `estaActivo()` (`activo !== false`), nunca comparando con
+     * `true`, y así no hace falta migrar nada.
+     */
+    activo: v.optional(v.boolean()),
   })
     .index("por_email", ["email"])
     .index("por_authUser", ["authUserId"]),
