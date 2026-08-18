@@ -1,12 +1,10 @@
-// ANDAMIAJE(PRO-7): pantalla placeholder — Perfil / Mi cuenta.
-import { PantallaPendiente } from "@/components/layout/PantallaPendiente";
+import type { Metadata } from "next";
+import { PantallaPerfil } from "@/components/perfil/PantallaPerfil";
+
+export const metadata: Metadata = {
+  title: "Mi cuenta · Vibe CRM",
+};
 
 export default function PerfilPage() {
-  return (
-    <PantallaPendiente
-      titulo="Mi cuenta"
-      issue="PRO-7"
-      descripcion="Datos personales, cambio de contraseña y cierre de sesión."
-    />
-  );
+  return <PantallaPerfil />;
 }

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Overlay } from "@/components/ui/Overlay";
 import { Select } from "@/components/ui/Select";
+import { mensajeDe } from "@/lib/errores";
 
 export type Rol = "propietaria" | "comercial";
 
@@ -139,12 +140,3 @@ export function FormularioUsuario({
   );
 }
 
-/** Convex envuelve el error del servidor; interesa la última línea con sentido. */
-function mensajeDe(fallo: unknown): string {
-  if (!(fallo instanceof Error)) return "No se ha podido completar la operación.";
-  const limpio = fallo.message
-    .split("\n")
-    .map((l) => l.replace(/^Uncaught Error:\s*/, "").trim())
-    .filter((l) => l.length > 0 && !l.startsWith("[Request ID") && !l.startsWith("at "));
-  return limpio.at(-1) ?? "No se ha podido completar la operación.";
-}

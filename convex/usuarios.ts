@@ -255,7 +255,7 @@ export const actualizar = mutation({
  * Se conserva el hash de la contraseña, así que sigue entrando con la misma
  * clave. Desaparece si la librería publica una API para renombrar cuentas.
  */
-async function renombrarCredencial(
+export async function renombrarCredencial(
   ctx: MutationCtx,
   authUserId: Id<"users">,
   emailNuevo: string,
@@ -404,7 +404,7 @@ export const porId = internalQuery({
 // —————————————————————————————————————————————— Reglas compartidas
 
 /** El email identifica a la persona y a su credencial: no puede repetirse. */
-async function exigirEmailLibre(
+export async function exigirEmailLibre(
   ctx: MutationCtx,
   email: string,
   exceptoId: Id<"usuarios"> | null,
@@ -426,7 +426,7 @@ async function exigirEmailLibre(
  * por sí solo dos cuentas `password` con el mismo email. Con dos, cuál resuelve
  * el login pasaría a depender del orden de inserción.
  */
-async function exigirCuentaLibre(
+export async function exigirCuentaLibre(
   ctx: MutationCtx,
   email: string,
   authUserIdPropio: Id<"users">,

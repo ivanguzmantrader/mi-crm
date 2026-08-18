@@ -1,4 +1,4 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getAuthSessionId, getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import type { Auth } from "convex/server";
 import { internal } from "./_generated/api";
@@ -70,6 +70,59 @@ export async function exigirDuena(ctx: Contexto): Promise<Doc<"usuarios">> {
   return usuario;
 }
 
+/** Lo que una action necesita saber de quien la llama. */
+export interface SesionAction {
+  usuario: Doc<"usuarios">;
+  /**
+   * No opcional a propósito. En `Doc<"usuarios">` el campo sí lo es, pero aquí
+   * está garantizado: el perfil se ha resuelto **buscando por** este id, así que
+   * si hay perfil, existe. Devolverlo ya estrechado evita que cada action tenga
+   * que asegurarlo por su cuenta.
+   */
+  authUserId: Id<"users">;
+  /** Sesión en curso, para poder conservarla al invalidar las demás. */
+  authSessionId: Id<"authSessions">;
+}
+
+/**
+ * Autoriza una action y devuelve los identificadores que va a necesitar.
+ *
+ * Hace falta una versión aparte de `exigirSesion` porque **una action no tiene
+ * `ctx.db`**: solo `runQuery` / `runMutation`.
+ *
+ * **Llamarla en la primera línea del handler.** Cualquier cosa por delante es
+ * trabajo hecho a petición de alguien todavía no autorizado.
+ */
+export async function exigirSesionAction(
+  ctx: ActionCtx,
+): Promise<SesionAction> {
+  const authUserId = await getAuthUserId(ctx);
+  if (authUserId === null) {
+    throw new Error("No hay sesión iniciada.");
+  }
+
+  const usuario = await ctx.runQuery(internal.autorizacion.perfilPorAuthUser, {
+    authUserId,
+  });
+  if (usuario === null) {
+    throw new Error("No hay sesión iniciada.");
+  }
+  if (usuario.activo === false) {
+    throw new Error("Esta cuenta ya no tiene acceso.");
+  }
+
+  const authSessionId = await getAuthSessionId(ctx);
+  if (authSessionId === null) {
+    // No es una comprobación de adorno: sin saber cuál es la sesión en curso no
+    // se puede cumplir "conservar la sesión actual" al invalidar las demás, y
+    // las alternativas serían dejar fuera a quien está haciendo la operación o
+    // no invalidar nada. Mejor parar antes de tocar credenciales.
+    throw new Error("No se ha podido identificar la sesión actual.");
+  }
+
+  return { usuario, authUserId, authSessionId };
+}
+
 /**
  * Igual que `exigirDuena`, pero para actions.
  *
@@ -86,20 +139,7 @@ export async function exigirDuena(ctx: Contexto): Promise<Doc<"usuarios">> {
 export async function exigirDuenaAction(
   ctx: ActionCtx,
 ): Promise<Doc<"usuarios">> {
-  const authUserId = await getAuthUserId(ctx);
-  if (authUserId === null) {
-    throw new Error("No hay sesión iniciada.");
-  }
-
-  const usuario = await ctx.runQuery(internal.autorizacion.perfilPorAuthUser, {
-    authUserId,
-  });
-  if (usuario === null) {
-    throw new Error("No hay sesión iniciada.");
-  }
-  if (usuario.activo === false) {
-    throw new Error("Esta cuenta ya no tiene acceso.");
-  }
+  const { usuario } = await exigirSesionAction(ctx);
   if (usuario.rol !== "propietaria") {
     throw new Error("Esta acción solo está disponible para la dueña.");
   }
