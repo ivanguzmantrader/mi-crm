@@ -51,7 +51,9 @@ export function PantallaEquipo() {
 
   if (equipo === undefined) return <Cargando />;
 
-  const duenasActivas = equipo.filter((p) => p.rol === "propietaria" && p.activo);
+  const duenasConAcceso = equipo.filter(
+    (p) => p.rol === "propietaria" && p.activo && p.tieneCredencial,
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -78,8 +80,8 @@ export function PantallaEquipo() {
               // ofrecer un botón que va a fallar.
               esUltimaDuena={
                 persona.rol === "propietaria" &&
-                persona.activo &&
-                duenasActivas.length === 1
+                persona.activo && persona.tieneCredencial &&
+                duenasConAcceso.length === 1
               }
               onEditar={() => setPanel({ tipo: "editar", persona })}
               onContrasena={() => setPanel({ tipo: "contrasena", persona })}
@@ -169,19 +171,23 @@ function Fila({
   onReactivar: () => void;
   onDesactivar: () => void;
 }) {
+  // Estar activa no basta: sin credencial tampoco se puede entrar. Es el estado
+  // que deja un alta interrumpida, y pintarlo como acceso sería mentir.
+  const tieneAcceso = persona.activo && persona.tieneCredencial;
+
   return (
     <div className="flex items-center gap-3 px-[18px] py-3.5">
       <Avatar
         name={persona.nombre}
         size={40}
-        variant={persona.activo ? "primary" : "neutral"}
+        variant={tieneAcceso ? "primary" : "neutral"}
       />
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex min-w-0 items-center gap-2">
           <span
             className={
-              persona.activo
+              tieneAcceso
                 ? "truncate text-[15px] font-medium text-text"
                 : "truncate text-[15px] font-medium text-text-subtle"
             }
@@ -201,7 +207,7 @@ function Fila({
           Sin acceso es un estado normal, no un dato roto: es lo que deja una
           baja, y lo que dejará una invitación sin aceptar (PRO-67).
         */}
-        {!persona.activo && <Badge status="warning">Sin acceso</Badge>}
+        {!tieneAcceso && <Badge status="warning">Sin acceso</Badge>}
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
@@ -209,7 +215,7 @@ function Fila({
           <Pencil size={18} strokeWidth={1.5} />
         </IconButton>
 
-        {persona.activo ? (
+        {tieneAcceso ? (
           <>
             <IconButton
               aria-label={`Restablecer contraseña de ${persona.nombre}`}

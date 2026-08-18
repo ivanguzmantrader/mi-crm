@@ -141,11 +141,39 @@ export const crear = action({
   },
 });
 
+/**
+ * Crea el perfil, o **reutiliza el que quedó a medias**.
+ *
+ * Nace con `activo: false` a propósito: hasta que no tenga credencial no puede
+ * entrar, y decir lo contrario en la lista sería mentir. Es `enlazar` quien lo
+ * activa, una vez la credencial existe de verdad.
+ *
+ * Y es idempotente para el caso "perfil sin credencial", que es exactamente lo
+ * que deja un alta interrumpida entre el paso 1 y el 3. Sin esto, reintentar
+ * con el mismo email chocaría contra la comprobación de email único y el estado
+ * no convergería nunca: quedaría una persona a medio crear, imposible de
+ * terminar y imposible de recrear.
+ *
+ * Un perfil que **sí** tiene credencial es un duplicado de verdad y se rechaza.
+ */
 export const crearPerfil = internalMutation({
   args: { nombre: v.string(), email: v.string(), rol: ROL },
   handler: async (ctx, args): Promise<Id<"usuarios">> => {
-    await exigirEmailLibre(ctx, args.email, null);
-    return await ctx.db.insert("usuarios", { ...args, activo: true });
+    const existente = await ctx.db
+      .query("usuarios")
+      .withIndex("por_email", (q) => q.eq("email", args.email))
+      .unique();
+
+    if (existente !== null) {
+      if (existente.authUserId !== undefined) {
+        throw new Error(`Ya hay una persona con el email ${args.email}.`);
+      }
+      // Alta anterior que no llegó a terminar: se retoma con los datos nuevos.
+      await ctx.db.patch(existente._id, { ...args, activo: false });
+      return existente._id;
+    }
+
+    return await ctx.db.insert("usuarios", { ...args, activo: false });
   },
 });
 
@@ -239,9 +267,17 @@ async function renombrarCredencial(
     )
     .unique();
 
-  if (cuenta !== null) {
-    await ctx.db.patch(cuenta._id, { providerAccountId: emailNuevo });
+  // Falla cerrado: si hay `authUserId` pero no aparece su cuenta, los datos ya
+  // están inconsistentes y actualizar solo `users.email` lo empeoraría en
+  // silencio — el perfil diría un email y la credencial otra. Al lanzar, Convex
+  // revierte también el `patch` sobre `usuarios` de esta misma mutation.
+  if (cuenta === null) {
+    throw new Error(
+      "Esa persona tiene acceso pero no se encuentra su cuenta. No se ha cambiado nada; revísalo antes de continuar.",
+    );
   }
+
+  await ctx.db.patch(cuenta._id, { providerAccountId: emailNuevo });
   await ctx.db.patch(authUserId, { email: emailNuevo });
 }
 
@@ -424,9 +460,16 @@ async function exigirQueQuedeAlgunaDuena(
 
   if (usuario.rol !== "propietaria" || seguiriaSiendoDuena) return;
 
+  // "Con acceso" es activa **y** con credencial: una dueña sin credencial no
+  // puede entrar, así que no sirve para cumplir la regla por mucho que su fila
+  // diga `activo: true`.
   const todos = await ctx.db.query("usuarios").collect();
   const otrasDuenas = todos.filter(
-    (u) => u._id !== usuario._id && u.rol === "propietaria" && estaActivo(u),
+    (u) =>
+      u._id !== usuario._id &&
+      u.rol === "propietaria" &&
+      estaActivo(u) &&
+      u.authUserId !== undefined,
   );
 
   if (otrasDuenas.length === 0) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Overlay } from "@/components/ui/Overlay";
@@ -103,12 +104,24 @@ export function FormularioUsuario({
             required
             minLength={8}
             autoComplete="new-password"
-            error={error ?? undefined}
+            aria-describedby={error ? "error-formulario" : undefined}
           />
         )}
 
-        {error && !campos.password && (
-          <p role="alert" className="text-[13px] text-error-text">
+        {/*
+          Los errores del servidor son del formulario, no de un campo concreto:
+          "ya hay una persona con ese email" o "no puedes dejar el negocio sin
+          dueña" no tienen nada que ver con la contraseña. Colgarlos del último
+          Input haría que el usuario buscara el problema donde no está. Los
+          errores de campo se los queda la validación del navegador.
+        */}
+        {error && (
+          <p
+            id="error-formulario"
+            role="alert"
+            className="flex items-start gap-1.5 rounded-md bg-error-bg px-3 py-2 text-[13px] text-error-text"
+          >
+            <AlertCircle size={14} strokeWidth={1.5} aria-hidden className="mt-0.5 shrink-0" />
             {error}
           </p>
         )}
