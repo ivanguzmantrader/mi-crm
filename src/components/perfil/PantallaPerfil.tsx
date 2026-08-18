@@ -159,8 +159,15 @@ export function PantallaPerfil() {
             minLength={8}
             autoComplete="new-password"
           />
+          {/*
+            No promete instantaneidad a propósito: el registro de sesión se
+            revoca al momento, pero el token ya emitido en el otro dispositivo
+            sigue valiendo hasta que caduca (15 minutos, ver convex/auth.ts).
+            Decir "se cerrarán" a secas sería prometer más de lo que ocurre.
+          */}
           <p className="text-[13px] text-text-muted">
-            Al cambiarla se cerrarán tus sesiones abiertas en otros dispositivos.
+            Al cambiarla, tus otras sesiones dejarán de renovarse y se cerrarán
+            en unos minutos.
           </p>
         </FormularioPanel>
       )}

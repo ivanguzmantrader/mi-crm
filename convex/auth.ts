@@ -39,4 +39,39 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       },
     }),
   ],
+
+  /**
+   * 15 minutos en vez de la hora por defecto.
+   *
+   * Importa por lo que promete "cerrar tus otras sesiones" al cambiar la
+   * contraseña (`convex/perfil.ts`). `invalidateSessions` borra el registro de
+   * sesión de inmediato, pero el JWT ya emitido es autocontenido: nadie lo
+   * contrasta con la tabla en cada petición, así que sigue valiendo hasta que
+   * caduca. Con una hora, esa promesa era demasiado blanda; con 15 minutos el
+   * peor caso queda acotado.
+   *
+   * Sigue sin ser revocación instantánea. Conseguir eso obligaría a que cada
+   * función protegida comprobase la sesión contra la tabla —o a versionar un
+   * claim revocable—, y eso encarece la autorización de todo el backend. No es
+   * trabajo de PRO-7.
+   */
+  jwt: { durationMs: 15 * 60 * 1000 },
+
+  /**
+   * 30 intentos fallidos por hora en vez de 10.
+   *
+   * El limitador es compartido: verificar la contraseña actual en "Mi cuenta"
+   * pasa por el mismo contador que iniciar sesión, porque ambos usan el
+   * identificador de la cuenta. Con el valor por defecto, equivocarse 10 veces
+   * al cambiar la contraseña dejaba a esa persona **sin poder entrar**, y la
+   * pantalla de login —que muestra un mensaje genérico a propósito, para no
+   * permitir enumerar cuentas— no podía explicarle por qué.
+   *
+   * A 30, se recupera un intento cada 2 minutos en lugar de cada 6. Sigue
+   * siendo una barrera seria contra la fuerza bruta, pero el bloqueo accidental
+   * por teclear mal deja de ser realista.
+   *
+   * Ojo con el nombre: la errata ("Attemps") es de la propia librería.
+   */
+  signIn: { maxFailedAttempsPerHour: 30 },
 });
