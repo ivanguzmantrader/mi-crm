@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { exigirSesion } from "./autorizacion";
+import { exigirSesion, tieneAcceso } from "./autorizacion";
 import {
   exigirFechaCercana,
   exigirFechaISO,
@@ -59,6 +59,85 @@ export const pendientes = query({
     return decorados
       .filter((f): f is NonNullable<typeof f> => f !== null)
       .sort((a, b) => a.vence.localeCompare(b.vence));
+  },
+});
+
+const MAX_ACCION = 200;
+
+/**
+ * Programa un seguimiento (PRO-13 / F8).
+ *
+ * **`hecho` no es un argumento.** El enunciado pide que el estado inicial sea
+ * siempre "pendiente", y la forma de cumplirlo es que no exista en el validador
+ * — igual que `estado` en clientes.ts y `autorId` en interacciones.ts.
+ * `fechaHecho` tampoco se escribe: lo que acaba de nacer no está hecho.
+ *
+ * **`responsableId` sí es un argumento**, al revés que el `autorId` de una
+ * interacción, y la diferencia no es un descuido: aquel registra *quién hizo
+ * algo* (un hecho, con una sola respuesta verdadera) y este asigna *quién debe
+ * hacerlo* (una decisión). El enunciado pide explícitamente poder asignárselo a
+ * otra persona del equipo.
+ */
+export const crear = mutation({
+  args: {
+    clienteId: v.id("clientes"),
+    responsableId: v.id("usuarios"),
+    accion: v.string(),
+    /**
+     * Obligatoria, a diferencia de la fecha de una interacción: aquí no hay un
+     * valor por defecto que el servidor pueda inventar, porque el sentido de un
+     * seguimiento *es* su fecha.
+     */
+    vence: v.string(),
+  },
+  handler: async (ctx, { clienteId, responsableId, accion, vence }) => {
+    await exigirSesion(ctx);
+
+    /**
+     * `v.id(...)` es una referencia tipada, no una clave foránea: comprueba la
+     * tabla, no que el documento exista.
+     *
+     * Con un cliente inexistente el destrozo sería silencioso y distinto del de
+     * una interacción huérfana: el seguimiento **sí** llegaría a `pendientes`,
+     * que recorre la tabla por `por_hecho`, pero esa función descarta la fila
+     * cuando el cliente no existe para no tumbar la pantalla Hoy. Es decir, se
+     * crearía, no aparecería en ninguna parte, y nadie sabría que está ahí.
+     */
+    const cliente = await ctx.db.get(clienteId);
+    if (cliente === null) {
+      throw new Error("Este cliente ya no existe.");
+    }
+
+    // Mismo criterio —y misma función— que filtra `usuarios.asignables`. Con una
+    // copia por cada lado, el desplegable y el servidor divergirían en cuanto
+    // alguien tocase uno de los dos.
+    const responsable = await ctx.db.get(responsableId);
+    if (responsable === null || !tieneAcceso(responsable)) {
+      throw new Error("Esa persona no puede hacerse cargo de un seguimiento.");
+    }
+
+    const tarea = accion.trim();
+    if (tarea.length === 0) {
+      throw new Error("Escribe qué hay que hacer.");
+    }
+    if (tarea.length > MAX_ACCION) {
+      throw new Error(`La descripción no puede pasar de ${MAX_ACCION} caracteres.`);
+    }
+
+    /**
+     * Solo se valida el **formato**, no el rango, y es deliberado: un
+     * seguimiento es un plan, y uno con fecha pasada no es un dato inválido sino
+     * uno **atrasado**, que la pantalla Hoy ya recoge en su bloque rojo. Es la
+     * asimetría con `interacciones.crear`, donde el futuro sí es imposible
+     * porque allí se registra algo que ya ocurrió.
+     */
+    return await ctx.db.insert("seguimientos", {
+      clienteId,
+      responsableId,
+      accion: tarea,
+      vence: exigirFechaISO(vence, "vence"),
+      hecho: false,
+    });
   },
 });
 

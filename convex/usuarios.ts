@@ -14,6 +14,8 @@ import {
   estaActivo,
   exigirDuena,
   exigirDuenaAction,
+  exigirSesion,
+  tieneAcceso,
   usuarioActual,
 } from "./autorizacion";
 import { PROVEEDOR, obtenerOCrearCredencial } from "./credenciales";
@@ -79,6 +81,32 @@ export const actual = query({
         rol: usuario.rol,
       },
     };
+  },
+});
+
+/**
+ * Quién puede hacerse cargo de un seguimiento (PRO-13).
+ *
+ * Existe aparte de `listar` porque **aquella exige `exigirDuena`**: es de la
+ * pantalla de Equipo y devuelve email, rol, si está activo y si tiene
+ * credencial, es decir el estado administrativo de la plantilla, que PRO-8
+ * decidió reservar a la dueña. Si el selector de responsable usara `listar`,
+ * un comercial no podría programar nada — y programar es justo lo que más hace.
+ *
+ * Relajar `listar` a `exigirSesion` habría sido más corto y habría filtrado esos
+ * datos a todo el equipo. Esto devuelve lo mínimo: nombre e id.
+ */
+export const asignables = query({
+  args: {},
+  handler: async (ctx) => {
+    await exigirSesion(ctx);
+
+    const filas = await ctx.db.query("usuarios").collect();
+
+    return filas
+      .filter(tieneAcceso)
+      .map((u) => ({ _id: u._id, nombre: u.nombre }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
   },
 });
 

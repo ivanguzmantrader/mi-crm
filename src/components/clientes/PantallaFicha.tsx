@@ -30,6 +30,7 @@ import { ESTADO_CLIENTE } from "@/lib/estadoCliente";
 import { etiquetaVencimiento, fechaCorta } from "@/lib/fechas";
 import { useHoy } from "@/lib/useHoy";
 import { FormularioInteraccion } from "@/components/interacciones/FormularioInteraccion";
+import { FormularioSeguimiento } from "@/components/seguimientos/FormularioSeguimiento";
 import { ETIQUETA_CANAL, FormularioCliente } from "./FormularioCliente";
 
 type Ficha = NonNullable<FunctionReturnType<typeof api.clientes.ficha>>;
@@ -63,12 +64,11 @@ const ACCIONES: AccionFicha[] = [
     label: "Anotar interacción",
     icono: <PencilLine size={18} strokeWidth={1.5} />,
   },
-  // ANDAMIAJE(PRO-13): el botón abre un panel informativo; el formulario de seguimiento lo construye PRO-13.
+  // Ya construida (PRO-13): abre el formulario real con el cliente fijado.
   {
     id: "seguimiento",
     label: "Programar seguimiento",
     icono: <CalendarPlus size={18} strokeWidth={1.5} />,
-    issue: "PRO-13",
   },
   // ANDAMIAJE(PRO-15): el botón abre un panel informativo; el formulario de venta lo construye PRO-15.
   {
@@ -116,6 +116,7 @@ export function PantallaFicha({ id }: { id: string }) {
   const ficha = useQuery(api.clientes.ficha, { id });
   const actualizar = useMutation(api.clientes.actualizar);
   const anotar = useMutation(api.interacciones.crear);
+  const programar = useMutation(api.seguimientos.crear);
   const [editando, setEditando] = useState(false);
   const [accion, setAccion] = useState<AccionFicha | null>(null);
 
@@ -260,7 +261,7 @@ export function PantallaFicha({ id }: { id: string }) {
         />
       )}
 
-      {accion?.id === "interaccion" ? (
+      {accion?.id === "interaccion" && (
         <FormularioInteraccion
           clienteId={cliente._id}
           onCerrar={() => setAccion(null)}
@@ -270,15 +271,23 @@ export function PantallaFicha({ id }: { id: string }) {
             // cuatro tablas, así que se reejecuta sola y el apunte aparece.
           }}
         />
-      ) : (
-        <Overlay
-          open={accion !== null}
-          onClose={() => setAccion(null)}
-          title={accion?.label ?? ""}
-        >
+      )}
+
+      {accion?.id === "seguimiento" && (
+        <FormularioSeguimiento
+          clienteId={cliente._id}
+          onCerrar={() => setAccion(null)}
+          onGuardar={async (datos) => {
+            await programar(datos);
+          }}
+        />
+      )}
+
+      {accion?.issue !== undefined && (
+        <Overlay open onClose={() => setAccion(null)} title={accion.label}>
           <p className="text-sm text-text-muted">
             El formulario se construye en{" "}
-            <span className="font-mono text-text">{accion?.issue}</span>. Al
+            <span className="font-mono text-text">{accion.issue}</span>. Al
             guardar volverá a esta misma ficha con el historial actualizado.
           </p>
         </Overlay>

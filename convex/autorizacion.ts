@@ -28,6 +28,22 @@ export function estaActivo(usuario: Doc<"usuarios">): boolean {
   return usuario.activo !== false;
 }
 
+/**
+ * ¿Puede esta persona entrar y, por tanto, hacerse cargo de algo?
+ *
+ * Estar activa no basta: sin credencial tampoco se puede iniciar sesión, que es
+ * el estado en el que queda un alta interrumpida (y el que dejará la invitación
+ * sin aceptar de PRO-67). `PantallaEquipo` ya lo pinta como "Sin acceso".
+ *
+ * Vive aquí junto a `estaActivo` y no en `usuarios.ts` porque es una regla sobre
+ * el estado de una persona, no una operación de la pantalla de Equipo: así
+ * `seguimientos.ts` puede preguntarla sin arrastrar un módulo entero de queries,
+ * mutations y actions.
+ */
+export function tieneAcceso(usuario: Doc<"usuarios">): boolean {
+  return estaActivo(usuario) && usuario.authUserId !== undefined;
+}
+
 /** Perfil de quien llama, o `null` si no hay sesión. */
 export async function usuarioActual(
   ctx: Contexto,

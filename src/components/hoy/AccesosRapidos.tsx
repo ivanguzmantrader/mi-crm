@@ -15,12 +15,11 @@ export interface AccesoRapido {
 }
 
 export const ACCESOS: AccesoRapido[] = [
-  // ANDAMIAJE(PRO-13): abre el panel con un cuerpo stub; el formulario de seguimiento lo construye PRO-13.
+  // Ya construido (PRO-13): abre el formulario real, con selector de cliente.
   {
     id: "tarea",
     label: "Nueva tarea",
     icono: <CalendarPlus size={18} strokeWidth={1.5} />,
-    issue: "PRO-13",
     primaria: true,
   },
   // Ya construido (PRO-12): abre el formulario real, con selector de cliente.

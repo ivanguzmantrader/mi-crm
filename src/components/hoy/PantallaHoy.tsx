@@ -8,6 +8,7 @@ import type { FunctionReturnType } from "convex/server";
 import { api } from "../../../convex/_generated/api";
 import { FormularioCliente } from "@/components/clientes/FormularioCliente";
 import { FormularioInteraccion } from "@/components/interacciones/FormularioInteraccion";
+import { FormularioSeguimiento } from "@/components/seguimientos/FormularioSeguimiento";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -37,6 +38,7 @@ export function PantallaHoy() {
   const seguimientos = useQuery(api.seguimientos.pendientes);
   const crear = useMutation(api.clientes.crear);
   const anotar = useMutation(api.interacciones.crear);
+  const programar = useMutation(api.seguimientos.crear);
   const router = useRouter();
   const [abierto, setAbierto] = useState<AccesoRapido | null>(null);
 
@@ -102,6 +104,18 @@ export function PantallaHoy() {
             // Desde aquí no hay ficha a la que volver, así que se va a la del
             // cliente elegido: PRO-12 pide aterrizar en ella con el historial
             // ya actualizado.
+            router.push(`/clientes/${datos.clienteId}`);
+          }}
+        />
+      )}
+
+      {abierto?.id === "tarea" && (
+        <FormularioSeguimiento
+          onCerrar={() => setAbierto(null)}
+          onGuardar={async (datos) => {
+            await programar(datos);
+            // PRO-13 pide volver a la ficha del cliente con el seguimiento ya
+            // visible en sus pendientes.
             router.push(`/clientes/${datos.clienteId}`);
           }}
         />
