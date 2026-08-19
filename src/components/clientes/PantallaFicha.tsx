@@ -29,6 +29,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { ESTADO_CLIENTE } from "@/lib/estadoCliente";
 import { etiquetaVencimiento, fechaCorta } from "@/lib/fechas";
 import { useHoy } from "@/lib/useHoy";
+import { FormularioInteraccion } from "@/components/interacciones/FormularioInteraccion";
 import { ETIQUETA_CANAL, FormularioCliente } from "./FormularioCliente";
 
 type Ficha = NonNullable<FunctionReturnType<typeof api.clientes.ficha>>;
@@ -39,26 +40,28 @@ interface AccionFicha {
   id: string;
   label: string;
   icono: ReactNode;
-  /** Issue que construye el formulario de verdad. */
-  issue: string;
+  /**
+   * Issue que construye el formulario de verdad. Sin `issue`, la acción ya está
+   * construida y abre su formulario real.
+   */
+  issue?: string;
 }
 
 /**
- * Las tres acciones rápidas de la ficha. PRO-11 pide dejar los botones y la
+ * Las tres acciones rápidas de la ficha. PRO-11 dejó los botones y la
  * integración lista; los formularios son tareas propias de M4 y M5.
  *
- * Cada una lleva **su propio marcador**, no uno compartido que las nombre a las
- * tres: el inventario agrupa por issue, así que un marcador único haría que al
- * cerrar PRO-12 quedara registrado como pendiente algo que en realidad espera a
- * PRO-13 y PRO-15. Un marcador apunta siempre a la issue que lo va a borrar.
+ * Las que siguen siendo stub llevan **su propio marcador**, no uno compartido
+ * que las nombre a todas: el inventario agrupa por issue, así que un marcador
+ * único haría que al cerrar una quedara registrado como pendiente algo que en
+ * realidad espera a otra. Un marcador apunta siempre a la issue que lo borra.
  */
 const ACCIONES: AccionFicha[] = [
-  // ANDAMIAJE(PRO-12): el botón abre un panel informativo; el formulario de interacción lo construye PRO-12.
+  // Ya construida (PRO-12): abre el formulario real con el cliente fijado.
   {
     id: "interaccion",
     label: "Anotar interacción",
     icono: <PencilLine size={18} strokeWidth={1.5} />,
-    issue: "PRO-12",
   },
   // ANDAMIAJE(PRO-13): el botón abre un panel informativo; el formulario de seguimiento lo construye PRO-13.
   {
@@ -112,6 +115,7 @@ const EUROS = new Intl.NumberFormat("es-ES", {
 export function PantallaFicha({ id }: { id: string }) {
   const ficha = useQuery(api.clientes.ficha, { id });
   const actualizar = useMutation(api.clientes.actualizar);
+  const anotar = useMutation(api.interacciones.crear);
   const [editando, setEditando] = useState(false);
   const [accion, setAccion] = useState<AccionFicha | null>(null);
 
@@ -256,17 +260,29 @@ export function PantallaFicha({ id }: { id: string }) {
         />
       )}
 
-      <Overlay
-        open={accion !== null}
-        onClose={() => setAccion(null)}
-        title={accion?.label ?? ""}
-      >
-        <p className="text-sm text-text-muted">
-          El formulario se construye en{" "}
-          <span className="font-mono text-text">{accion?.issue}</span>. Al
-          guardar volverá a esta misma ficha con el historial actualizado.
-        </p>
-      </Overlay>
+      {accion?.id === "interaccion" ? (
+        <FormularioInteraccion
+          clienteId={cliente._id}
+          onCerrar={() => setAccion(null)}
+          onGuardar={async (datos) => {
+            await anotar(datos);
+            // No hace falta navegar ni refrescar: `clientes.ficha` lee las
+            // cuatro tablas, así que se reejecuta sola y el apunte aparece.
+          }}
+        />
+      ) : (
+        <Overlay
+          open={accion !== null}
+          onClose={() => setAccion(null)}
+          title={accion?.label ?? ""}
+        >
+          <p className="text-sm text-text-muted">
+            El formulario se construye en{" "}
+            <span className="font-mono text-text">{accion?.issue}</span>. Al
+            guardar volverá a esta misma ficha con el historial actualizado.
+          </p>
+        </Overlay>
+      )}
     </div>
   );
 }

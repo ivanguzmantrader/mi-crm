@@ -113,3 +113,35 @@ export function exigirFechaCercana(fecha: string): string {
   }
   return fecha;
 }
+
+/**
+ * Rechaza una fecha posterior a `hoy`. Para lo que **ya ocurrió**: una
+ * interacción anotada no puede ser de mañana; eso sería un seguimiento.
+ *
+ * **Ojo con la diferencia respecto a `exigirFechaCercana`, que es la razón de
+ * que existan las dos.** Aquella acota lo que el usuario *afirma que es hoy*;
+ * esta compara *contra* ese hoy. Son pasos distintos de la misma cadena y no se
+ * pueden fundir en uno.
+ *
+ * En concreto: tolerar aquí un día de margen contra la fecha del servidor —para
+ * dar aire a zonas horarias adelantadas— dejaría pasar justo lo que se quiere
+ * prohibir. Alguien en España elegiría **mañana** y entraría, porque mañana cae
+ * dentro del margen; la regla no valdría para el futuro más común de todos.
+ *
+ * La incertidumbre sobre qué día es para el usuario y la regla de que la fecha
+ * no sea futura son dos problemas distintos. El primero se resuelve dejando que
+ * el navegador mande su `hoy` (acotado con `exigirFechaCercana`, que para eso
+ * está); el segundo, comparando aquí sin margen ninguno.
+ *
+ * Por eso la referencia es un parámetro obligatorio: para que sea imposible
+ * llamar a esta función sin decidir contra qué compara.
+ */
+export function exigirFechaNoFutura(fecha: string, hoy: string): string {
+  // Las dos son ISO corto, así que comparar cadenas equivale a comparar días.
+  if (fecha > hoy) {
+    throw new Error(
+      `La fecha no puede ser futura: se recibió ${fecha} y hoy es ${hoy}.`,
+    );
+  }
+  return fecha;
+}

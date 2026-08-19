@@ -23,12 +23,11 @@ export const ACCESOS: AccesoRapido[] = [
     issue: "PRO-13",
     primaria: true,
   },
-  // ANDAMIAJE(PRO-12): abre el panel con un cuerpo stub; el formulario de interacción lo construye PRO-12.
+  // Ya construido (PRO-12): abre el formulario real, con selector de cliente.
   {
     id: "interaccion",
     label: "Anotar interacción",
     icono: <PencilLine size={18} strokeWidth={1.5} />,
-    issue: "PRO-12",
   },
   // ANDAMIAJE(PRO-15): abre el panel con un cuerpo stub; el formulario de venta lo construye PRO-15.
   {

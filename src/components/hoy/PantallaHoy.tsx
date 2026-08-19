@@ -7,6 +7,7 @@ import { CheckCheck } from "lucide-react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../../convex/_generated/api";
 import { FormularioCliente } from "@/components/clientes/FormularioCliente";
+import { FormularioInteraccion } from "@/components/interacciones/FormularioInteraccion";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -35,6 +36,7 @@ export type SeguimientoPendiente = FunctionReturnType<
 export function PantallaHoy() {
   const seguimientos = useQuery(api.seguimientos.pendientes);
   const crear = useMutation(api.clientes.crear);
+  const anotar = useMutation(api.interacciones.crear);
   const router = useRouter();
   const [abierto, setAbierto] = useState<AccesoRapido | null>(null);
 
@@ -72,7 +74,13 @@ export function PantallaHoy() {
         <Secciones seguimientos={seguimientos} hoy={hoy} />
       )}
 
-      {abierto?.id === "cliente" ? (
+      {/*
+        Reparto explícito por `id` en vez de ternarios encadenados: ya hay dos
+        accesos construidos y quedan dos por construir, así que encadenar
+        condiciones haría fácil dejarse un caso sin cubrir. El panel informativo
+        es la rama por defecto, para los que siguen siendo stub.
+      */}
+      {abierto?.id === "cliente" && (
         <FormularioCliente
           titulo="Nuevo cliente"
           textoAccion="Crear cliente"
@@ -84,15 +92,30 @@ export function PantallaHoy() {
             router.push(`/clientes/${id}`);
           }}
         />
-      ) : (
+      )}
+
+      {abierto?.id === "interaccion" && (
+        <FormularioInteraccion
+          onCerrar={() => setAbierto(null)}
+          onGuardar={async (datos) => {
+            await anotar(datos);
+            // Desde aquí no hay ficha a la que volver, así que se va a la del
+            // cliente elegido: PRO-12 pide aterrizar en ella con el historial
+            // ya actualizado.
+            router.push(`/clientes/${datos.clienteId}`);
+          }}
+        />
+      )}
+
+      {abierto?.issue !== undefined && (
         <Overlay
-          open={abierto !== null}
+          open
           onClose={() => setAbierto(null)}
-          title={abierto?.label ?? ""}
+          title={abierto.label}
         >
           <p className="text-sm text-text-muted">
             El formulario se construye en{" "}
-            <span className="font-mono text-text">{abierto?.issue}</span>, con su
+            <span className="font-mono text-text">{abierto.issue}</span>, con su
             propio selector de cliente.
           </p>
         </Overlay>

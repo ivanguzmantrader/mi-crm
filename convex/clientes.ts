@@ -239,6 +239,40 @@ export const listar = query({
 });
 
 /**
+ * Lista ligera para los selectores de cliente de los formularios (PRO-12, y
+ * luego PRO-13 y PRO-15).
+ *
+ * Existe aparte de `listar` por una razón concreta: aquella **escanea
+ * `interacciones` entera** para derivar el último contacto. Usarla para llenar
+ * un desplegable haría que cada interacción que alguien anote reejecutase la
+ * query que alimenta ese mismo desplegable — justo la tabla que PRO-12 empieza
+ * a escribir. Aquí solo se lee `clientes`.
+ *
+ * Devuelve teléfono y email además de la empresa porque **los clientes
+ * duplicados están permitidos a propósito** (ver la cabecera de `crear`): dos
+ * personas pueden llamarse igual, así que el nombre solo no siempre identifica
+ * a nadie y el selector necesita con qué desempatar.
+ */
+export const opciones = query({
+  args: {},
+  handler: async (ctx) => {
+    await exigirSesion(ctx);
+
+    const clientes = await ctx.db.query("clientes").collect();
+
+    return clientes
+      .map((cliente) => ({
+        _id: cliente._id,
+        nombre: cliente.nombre,
+        empresa: cliente.empresa ?? null,
+        telefono: cliente.telefono ?? null,
+        email: cliente.email ?? null,
+      }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  },
+});
+
+/**
  * Alta de cliente (PRO-9). Devuelve el id para que la pantalla pueda abrir su
  * ficha, que es lo que pide el enunciado: crear y ponerse a trabajar sin pasos
  * intermedios.

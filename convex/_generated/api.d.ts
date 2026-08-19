@@ -14,6 +14,7 @@ import type * as bootstrap from "../bootstrap.js";
 import type * as clientes from "../clientes.js";
 import type * as credenciales from "../credenciales.js";
 import type * as http from "../http.js";
+import type * as interacciones from "../interacciones.js";
 import type * as perfil from "../perfil.js";
 import type * as salud from "../salud.js";
 import type * as seed from "../seed.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   clientes: typeof clientes;
   credenciales: typeof credenciales;
   http: typeof http;
+  interacciones: typeof interacciones;
   perfil: typeof perfil;
   salud: typeof salud;
   seed: typeof seed;
