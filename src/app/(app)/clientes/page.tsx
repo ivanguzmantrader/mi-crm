@@ -1,12 +1,10 @@
-// ANDAMIAJE(PRO-10): pantalla placeholder — Listado de clientes con buscador.
-import { PantallaPendiente } from "@/components/layout/PantallaPendiente";
+import type { Metadata } from "next";
+import { PantallaClientes } from "@/components/clientes/PantallaClientes";
+
+export const metadata: Metadata = {
+  title: "Clientes · Vibe CRM",
+};
 
 export default function ClientesPage() {
-  return (
-    <PantallaPendiente
-      titulo="Clientes"
-      issue="PRO-10"
-      descripcion="Listado de clientes con buscador por nombre, teléfono o email."
-    />
-  );
+  return <PantallaClientes />;
 }

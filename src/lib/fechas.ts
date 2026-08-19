@@ -40,6 +40,24 @@ export function etiquetaVencimiento(vence: string, hoy: string = hoyISO()): stri
   return "";
 }
 
+/**
+ * "3 de junio" para fechas de este año, "3 de junio de 2025" para las de otro.
+ *
+ * El año se omite cuando es el actual porque en una lista de clientes casi todo
+ * es reciente y repetirlo en cada fila es ruido; pero omitirlo siempre haría que
+ * un contacto de hace año y medio pareciera de hace unas semanas.
+ */
+export function fechaCorta(iso: string, hoy: string = hoyISO()): string {
+  const [anio, mes, dia] = iso.split("-").map(Number);
+  const esteAnio = String(anio) === hoy.slice(0, 4);
+
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "numeric",
+    month: "long",
+    ...(esteAnio ? {} : { year: "numeric" }),
+  }).format(new Date(anio, mes - 1, dia));
+}
+
 /** "Martes, 23 de junio" — con la inicial en mayúscula. */
 export function etiquetaFechaLarga(fecha: Date = new Date()): string {
   const texto = new Intl.DateTimeFormat("es-ES", {

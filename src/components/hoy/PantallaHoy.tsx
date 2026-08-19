@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
+import { useMutation, useQuery } from "convex/react";
 import { CheckCheck } from "lucide-react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../../convex/_generated/api";
+import { FormularioCliente } from "@/components/clientes/FormularioCliente";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -32,6 +34,8 @@ export type SeguimientoPendiente = FunctionReturnType<
  */
 export function PantallaHoy() {
   const seguimientos = useQuery(api.seguimientos.pendientes);
+  const crear = useMutation(api.clientes.crear);
+  const router = useRouter();
   const [abierto, setAbierto] = useState<AccesoRapido | null>(null);
 
   // "Hoy" depende de la zona horaria de quien mira la pantalla, así que se
@@ -68,17 +72,31 @@ export function PantallaHoy() {
         <Secciones seguimientos={seguimientos} hoy={hoy} />
       )}
 
-      <Overlay
-        open={abierto !== null}
-        onClose={() => setAbierto(null)}
-        title={abierto?.label ?? ""}
-      >
-        <p className="text-sm text-text-muted">
-          El formulario se construye en{" "}
-          <span className="font-mono text-text">{abierto?.issue}</span>, con su
-          propio selector de cliente.
-        </p>
-      </Overlay>
+      {abierto?.id === "cliente" ? (
+        <FormularioCliente
+          titulo="Nuevo cliente"
+          textoAccion="Crear cliente"
+          onCerrar={() => setAbierto(null)}
+          onGuardar={async (datos) => {
+            const id = await crear(datos);
+            // Mismo aterrizaje que desde la lista: PRO-9 pide abrir la ficha del
+            // cliente recién creado, sin decir desde dónde se haya abierto.
+            router.push(`/clientes/${id}`);
+          }}
+        />
+      ) : (
+        <Overlay
+          open={abierto !== null}
+          onClose={() => setAbierto(null)}
+          title={abierto?.label ?? ""}
+        >
+          <p className="text-sm text-text-muted">
+            El formulario se construye en{" "}
+            <span className="font-mono text-text">{abierto?.issue}</span>, con su
+            propio selector de cliente.
+          </p>
+        </Overlay>
+      )}
     </div>
   );
 }

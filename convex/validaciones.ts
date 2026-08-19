@@ -20,6 +20,21 @@ export const ERROR_ACCESO = "No se ha podido completar la operación.";
 const FORMATO_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
+ * ¿Tiene forma de email? La comprobación cruda, sin política de errores.
+ *
+ * Existe aparte de `normalizarEmail` a propósito, aunque compartan la expresión
+ * regular. Aquella es del login y lanza `ERROR_ACCESO`, un mensaje opaco para
+ * que nadie pueda averiguar qué cuentas existen probando emails. Ese mismo
+ * mensaje en un formulario de cliente sería inservible: quien lo lee ya tiene
+ * sesión y lo único que ha pasado es que se ha equivocado tecleando. Son dos
+ * problemas distintos, así que cada lado construye su propio error a partir de
+ * esta comprobación.
+ */
+export function esEmail(valor: string): boolean {
+  return FORMATO_EMAIL.test(valor);
+}
+
+/**
  * Normaliza un email a su forma canónica: sin espacios y en minúsculas.
  *
  * La usan `profile()` de convex/auth.ts y el arranque, a propósito la misma:
@@ -63,4 +78,38 @@ export function exigirFechaISO(valor: string, campo: string): string {
     );
   }
   return valor;
+}
+
+/** Respaldo en UTC para cuando no llega la fecha local del cliente. */
+export function hoyISOEnServidor(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Acota la fecha afirmada por el cliente a ayer, hoy o mañana según el servidor.
+ *
+ * Hace falta porque el servidor de Convex corre en UTC y no puede fechar por su
+ * cuenta nada que le importe al usuario: cerca de medianoche, su "hoy" y el del
+ * navegador son días distintos. La fecha la aporta entonces el cliente, y esto
+ * evita que sea un valor libre.
+ *
+ * La comparación es **por día, no por milisegundos**: se genera el conjunto de
+ * los tres días aceptables y se comprueba pertenencia. Restar timestamps
+ * provocaría falsos rechazos justo cerca de medianoche, que es el caso que este
+ * acotado existe para cubrir. ±1 día cubre cualquier zona horaria (máx. ±14 h).
+ */
+export function exigirFechaCercana(fecha: string): string {
+  const hoy = new Date(`${hoyISOEnServidor()}T00:00:00Z`);
+  const aceptables = [-1, 0, 1].map((dias) => {
+    const d = new Date(hoy);
+    d.setUTCDate(d.getUTCDate() + dias);
+    return d.toISOString().slice(0, 10);
+  });
+
+  if (!aceptables.includes(fecha)) {
+    throw new Error(
+      `fecha debe estar entre ${aceptables[0]} y ${aceptables[2]}; se recibió ${fecha}`,
+    );
+  }
+  return fecha;
 }

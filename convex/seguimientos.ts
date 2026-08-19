@@ -1,7 +1,11 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { exigirSesion } from "./autorizacion";
-import { exigirFechaISO } from "./validaciones";
+import {
+  exigirFechaCercana,
+  exigirFechaISO,
+  hoyISOEnServidor,
+} from "./validaciones";
 
 /**
  * Seguimientos del negocio (F9 / PRO-14).
@@ -94,32 +98,3 @@ export const marcarHecho = mutation({
     await ctx.db.patch(id, { hecho, fechaHecho });
   },
 });
-
-/** Respaldo en UTC para cuando no llega la fecha local del cliente. */
-function hoyISOEnServidor(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-/**
- * Acota la fecha afirmada por el cliente a ayer, hoy o mañana según el servidor.
- *
- * La comparación es **por día, no por milisegundos**: se genera el conjunto de
- * los tres días aceptables y se comprueba pertenencia. Restar timestamps
- * provocaría falsos rechazos justo cerca de medianoche, que es el caso que este
- * acotado existe para cubrir. ±1 día cubre cualquier zona horaria (máx. ±14 h).
- */
-function exigirFechaCercana(fecha: string): string {
-  const hoy = new Date(`${hoyISOEnServidor()}T00:00:00Z`);
-  const aceptables = [-1, 0, 1].map((dias) => {
-    const d = new Date(hoy);
-    d.setUTCDate(d.getUTCDate() + dias);
-    return d.toISOString().slice(0, 10);
-  });
-
-  if (!aceptables.includes(fecha)) {
-    throw new Error(
-      `fecha debe estar entre ${aceptables[0]} y ${aceptables[2]}; se recibió ${fecha}`,
-    );
-  }
-  return fecha;
-}

@@ -5,14 +5,17 @@ export interface AccesoRapido {
   id: string;
   label: string;
   icono: ReactNode;
-  /** Issue de Linear que construye el formulario de verdad. */
-  issue: string;
+  /**
+   * Issue de Linear que construye el formulario de verdad. Sin `issue` el
+   * acceso ya está construido y abre su formulario real.
+   */
+  issue?: string;
   /** Acción primaria de la pantalla: una sola, en verde sólido (design.md §1). */
   primaria?: boolean;
 }
 
-// ANDAMIAJE(PRO-13): los 4 accesos abren el panel con un cuerpo stub; los formularios reales son PRO-13, PRO-12, PRO-15 y PRO-9.
 export const ACCESOS: AccesoRapido[] = [
+  // ANDAMIAJE(PRO-13): abre el panel con un cuerpo stub; el formulario de seguimiento lo construye PRO-13.
   {
     id: "tarea",
     label: "Nueva tarea",
@@ -20,32 +23,38 @@ export const ACCESOS: AccesoRapido[] = [
     issue: "PRO-13",
     primaria: true,
   },
+  // ANDAMIAJE(PRO-12): abre el panel con un cuerpo stub; el formulario de interacción lo construye PRO-12.
   {
     id: "interaccion",
     label: "Anotar interacción",
     icono: <PencilLine size={18} strokeWidth={1.5} />,
     issue: "PRO-12",
   },
+  // ANDAMIAJE(PRO-15): abre el panel con un cuerpo stub; el formulario de venta lo construye PRO-15.
   {
     id: "venta",
     label: "Registrar venta",
     icono: <TrendingUp size={18} strokeWidth={1.5} />,
     issue: "PRO-15",
   },
+  // Ya construido (PRO-9): abre el formulario real y aterriza en la ficha.
   {
     id: "cliente",
     label: "Nuevo cliente",
     icono: <UserPlus size={18} strokeWidth={1.5} />,
-    issue: "PRO-9",
   },
 ];
 
 export const ACCESO_NUEVA_TAREA = ACCESOS[0];
 
 /**
- * Los 4 accesos rápidos de la pantalla Hoy: permiten crear sin pasar antes por
- * la ficha de un cliente (PRO-14). Presentacional — el panel lo abre y lo
- * gobierna PantallaHoy, porque el estado vacío también dispara "Nueva tarea".
+ * Los accesos rápidos de la pantalla Hoy: permiten crear sin pasar antes por la
+ * ficha de un cliente (PRO-14).
+ *
+ * Hoy conviven dos clases, y por eso `issue` es opcional: "Nuevo cliente" abre
+ * ya su formulario real (PRO-9), y los otros tres abren un panel que solo dice
+ * qué issue los construirá. Presentacional — quién abre qué lo decide
+ * PantallaHoy, porque el estado vacío también dispara "Nueva tarea".
  */
 export function AccesosRapidos({
   onAbrir,
